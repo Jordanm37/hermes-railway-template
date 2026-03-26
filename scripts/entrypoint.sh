@@ -95,6 +95,30 @@ do
   append_if_set "$key"
 done
 
+# Bootstrap Gmail MCP credentials from env vars
+GMAIL_MCP_DIR="${HERMES_HOME}/gmail-mcp"
+if [[ -n "${GMAIL_OAUTH_KEYS_JSON:-}" ]]; then
+  mkdir -p "${GMAIL_MCP_DIR}"
+  echo "${GMAIL_OAUTH_KEYS_JSON}" > "${GMAIL_MCP_DIR}/gcp-oauth.keys.json"
+  echo "[bootstrap] Wrote Gmail OAuth keys"
+fi
+if [[ -n "${GMAIL_CREDENTIALS_JSON:-}" ]]; then
+  mkdir -p "${GMAIL_MCP_DIR}"
+  echo "${GMAIL_CREDENTIALS_JSON}" > "${GMAIL_MCP_DIR}/credentials.json"
+  echo "[bootstrap] Wrote Gmail credentials"
+fi
+
+# Bootstrap gcalcli credentials from env vars
+GCALCLI_DIR="${HERMES_HOME}/gcalcli"
+if [[ -n "${GCALCLI_OAUTH_JSON:-}" ]]; then
+  mkdir -p "${GCALCLI_DIR}"
+  echo "${GCALCLI_OAUTH_JSON}" > "${GCALCLI_DIR}/oauth"
+  echo "[bootstrap] Wrote gcalcli OAuth token"
+fi
+
+# Find gmail-mcp entry point
+GMAIL_MCP_BIN="$(which gmail-mcp 2>/dev/null || node -e "console.log(require.resolve('@shinzolabs/gmail-mcp/dist/index.js'))" 2>/dev/null || echo "")"
+
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "[bootstrap] Creating ${CONFIG_FILE}"
   cat > "$CONFIG_FILE" <<EOF
@@ -106,6 +130,20 @@ compression:
   enabled: true
   threshold: 0.85
 EOF
+
+  # Add MCP servers if Gmail credentials are present
+  if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
+    cat >> "$CONFIG_FILE" <<EOF
+mcp_servers:
+  gmail:
+    command: node
+    args: ["${GMAIL_MCP_BIN}"]
+    env:
+      MCP_CONFIG_DIR: "${GMAIL_MCP_DIR}"
+    timeout: 120
+EOF
+    echo "[bootstrap] Added Gmail MCP server to config"
+  fi
 fi
 
 if [[ ! -f "$INIT_MARKER" ]]; then

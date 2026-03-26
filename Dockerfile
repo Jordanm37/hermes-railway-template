@@ -23,8 +23,15 @@ FROM python:3.11-slim
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     tini \
+  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
+
+# Install gmail-mcp server and gcalcli
+RUN npm install -g @shinzolabs/gmail-mcp@1.7.4 \
+  && pip install --no-cache-dir gcalcli
 
 ENV PATH="/opt/venv/bin:${PATH}" \
   PYTHONUNBUFFERED=1 \
