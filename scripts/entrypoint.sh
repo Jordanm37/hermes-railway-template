@@ -159,5 +159,15 @@ if [[ -z "${TELEGRAM_ALLOWED_USERS:-}${DISCORD_ALLOWED_USERS:-}${SLACK_ALLOWED_U
   fi
 fi
 
+# Write SOUL.md if provided via env var or bundled
+SOUL_FILE="${HERMES_HOME}/SOUL.md"
+if [[ -n "${HERMES_SOUL_MD:-}" ]]; then
+  echo "${HERMES_SOUL_MD}" > "${SOUL_FILE}"
+  echo "[bootstrap] Wrote SOUL.md from env var"
+elif [[ ! -f "${SOUL_FILE}" && -f /app/nikhil/SOUL.md ]]; then
+  cp /app/nikhil/SOUL.md "${SOUL_FILE}"
+  echo "[bootstrap] Copied bundled SOUL.md"
+fi
+
 echo "[bootstrap] Starting Hermes gateway..."
 exec hermes gateway
