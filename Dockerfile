@@ -29,9 +29,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-# Install gmail-mcp server and gcalcli
+# Install gmail-mcp server, gcalcli, and plane-mcp-server
 RUN npm install -g @shinzolabs/gmail-mcp@1.7.4 \
-  && pip install --no-cache-dir gcalcli
+  && pip install --no-cache-dir gcalcli plane-mcp-server
 
 ENV PATH="/opt/venv/bin:${PATH}" \
   PYTHONUNBUFFERED=1 \
