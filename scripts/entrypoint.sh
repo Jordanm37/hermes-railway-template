@@ -112,7 +112,7 @@ fi
 GCALCLI_DIR="${HERMES_HOME}/gcalcli"
 export XDG_CONFIG_HOME="${HERMES_HOME}"
 if [[ -f "${GMAIL_MCP_DIR}/credentials.json" ]]; then
-  python /app/scripts/bootstrap_gcalcli.py "${GMAIL_MCP_DIR}" "${GCALCLI_DIR}" 2>&1 || true
+  /opt/venv/bin/python /app/scripts/bootstrap_gcalcli.py "${GMAIL_MCP_DIR}" "${GCALCLI_DIR}" 2>&1 || true
 fi
 
 # Find gmail-mcp entry point
