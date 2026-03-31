@@ -130,9 +130,11 @@ compression:
   enabled: true
   threshold: 0.85
 EOF
+fi
 
-  # Add MCP servers if Gmail credentials are present
-  if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
+# Ensure MCP servers config is present (update on every boot)
+if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
+  if ! grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
     cat >> "$CONFIG_FILE" <<EOF
 mcp_servers:
   gmail:
@@ -143,6 +145,8 @@ mcp_servers:
     timeout: 120
 EOF
     echo "[bootstrap] Added Gmail MCP server to config"
+  else
+    echo "[bootstrap] MCP servers already configured"
   fi
 fi
 
