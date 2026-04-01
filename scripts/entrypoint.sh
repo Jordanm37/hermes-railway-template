@@ -132,38 +132,36 @@ compression:
 EOF
 fi
 
-# Ensure Gmail MCP server is in config (update on every boot)
-if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
-  if ! grep -q "gmail:" "$CONFIG_FILE" 2>/dev/null; then
-    if grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
-      # mcp_servers section exists, append gmail under it
-      sed -i '/^mcp_servers:/a\  gmail:\n    command: node\n    args: ["'"${GMAIL_MCP_BIN}"'"]\n    env:\n      MCP_CONFIG_DIR: "'"${GMAIL_MCP_DIR}"'"\n    timeout: 120' "$CONFIG_FILE"
-    else
-      # No mcp_servers section, create it
-      cat >> "$CONFIG_FILE" <<EOF
-mcp_servers:
+# Rewrite MCP servers block on every boot (clean YAML, picks up new env vars)
+# First, strip any existing mcp_servers block from config
+if grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
+  # Remove from mcp_servers: to end of file, then re-append
+  sed -i '/^mcp_servers:/,$d' "$CONFIG_FILE"
+  echo "[bootstrap] Cleared stale MCP config"
+fi
+
+{
+  echo "mcp_servers:"
+
+  # Gmail MCP
+  if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
+    cat <<GMAIL
   gmail:
     command: node
     args: ["${GMAIL_MCP_BIN}"]
     env:
       MCP_CONFIG_DIR: "${GMAIL_MCP_DIR}"
     timeout: 120
-EOF
-    fi
-    echo "[bootstrap] Added Gmail MCP server to config"
-  else
-    echo "[bootstrap] Gmail MCP already configured"
+GMAIL
+    echo "[bootstrap] Gmail MCP configured" >&2
   fi
-fi
 
-# Ensure Plane MCP server config is present
-PLANE_MCP_BIN="$(which plane-mcp-server 2>/dev/null || echo "")"
-if [[ -n "${PLANE_API_KEY:-}" && -n "${PLANE_MCP_BIN}" ]]; then
-  if ! grep -q "plane:" "$CONFIG_FILE" 2>/dev/null; then
-    if grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
-      cat >> "$CONFIG_FILE" <<EOF
+  # Plane MCP
+  PLANE_MCP_BIN="$(which plane-mcp-server 2>/dev/null || echo "")"
+  if [[ -n "${PLANE_API_KEY:-}" && -n "${PLANE_MCP_BIN}" ]]; then
+    cat <<PLANE
   plane:
-    command: ${PLANE_MCP_BIN}
+    command: "${PLANE_MCP_BIN}"
     args: ["stdio"]
     env:
       PLANE_API_KEY: "${PLANE_API_KEY}"
@@ -171,24 +169,12 @@ if [[ -n "${PLANE_API_KEY:-}" && -n "${PLANE_MCP_BIN}" ]]; then
       PLANE_BASE_URL: "${PLANE_BASE_URL:-https://api.plane.so}"
       PLANE_DISABLED_TOOLS: "${PLANE_DISABLED_TOOLS:-}"
     timeout: 120
-EOF
-    else
-      cat >> "$CONFIG_FILE" <<EOF
-mcp_servers:
-  plane:
-    command: ${PLANE_MCP_BIN}
-    args: ["stdio"]
-    env:
-      PLANE_API_KEY: "${PLANE_API_KEY}"
-      PLANE_WORKSPACE_SLUG: "${PLANE_WORKSPACE_SLUG:-engram}"
-      PLANE_BASE_URL: "${PLANE_BASE_URL:-https://api.plane.so}"
-      PLANE_DISABLED_TOOLS: "${PLANE_DISABLED_TOOLS:-}"
-    timeout: 120
-EOF
-    fi
-    echo "[bootstrap] Added Plane MCP server to config"
+PLANE
+    echo "[bootstrap] Plane MCP configured" >&2
   fi
-fi
+} >> "$CONFIG_FILE"
+
+echo "[bootstrap] MCP servers block written to config"
 
 if [[ ! -f "$INIT_MARKER" ]]; then
   date -u +"%Y-%m-%dT%H:%M:%SZ" > "$INIT_MARKER"
@@ -214,11 +200,4 @@ elif [[ ! -f "${SOUL_FILE}" && -f /app/nikhil/SOUL.md ]]; then
 fi
 
 echo "[bootstrap] Starting Hermes gateway..."
-
-# Run persistent boot hooks from /data volume (survives redeploys)
-if [[ -x "${HERMES_HOME}/hooks/on_boot.sh" ]]; then
-  echo "[bootstrap] Running on_boot hook..."
-  "${HERMES_HOME}/hooks/on_boot.sh" || true
-fi
-
 exec hermes gateway
