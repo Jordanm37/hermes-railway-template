@@ -214,4 +214,11 @@ elif [[ ! -f "${SOUL_FILE}" && -f /app/nikhil/SOUL.md ]]; then
 fi
 
 echo "[bootstrap] Starting Hermes gateway..."
+
+# Run persistent boot hooks from /data volume (survives redeploys)
+if [[ -x "${HERMES_HOME}/hooks/on_boot.sh" ]]; then
+  echo "[bootstrap] Running on_boot hook..."
+  "${HERMES_HOME}/hooks/on_boot.sh" || true
+fi
+
 exec hermes gateway
