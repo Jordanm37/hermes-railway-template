@@ -132,10 +132,15 @@ compression:
 EOF
 fi
 
-# Ensure MCP servers config is present (update on every boot)
+# Ensure Gmail MCP server is in config (update on every boot)
 if [[ -f "${GMAIL_MCP_DIR}/credentials.json" && -n "${GMAIL_MCP_BIN}" ]]; then
-  if ! grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
-    cat >> "$CONFIG_FILE" <<EOF
+  if ! grep -q "gmail:" "$CONFIG_FILE" 2>/dev/null; then
+    if grep -q "mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
+      # mcp_servers section exists, append gmail under it
+      sed -i '/^mcp_servers:/a\  gmail:\n    command: node\n    args: ["'"${GMAIL_MCP_BIN}"'"]\n    env:\n      MCP_CONFIG_DIR: "'"${GMAIL_MCP_DIR}"'"\n    timeout: 120' "$CONFIG_FILE"
+    else
+      # No mcp_servers section, create it
+      cat >> "$CONFIG_FILE" <<EOF
 mcp_servers:
   gmail:
     command: node
@@ -144,9 +149,10 @@ mcp_servers:
       MCP_CONFIG_DIR: "${GMAIL_MCP_DIR}"
     timeout: 120
 EOF
+    fi
     echo "[bootstrap] Added Gmail MCP server to config"
   else
-    echo "[bootstrap] MCP servers already configured"
+    echo "[bootstrap] Gmail MCP already configured"
   fi
 fi
 
