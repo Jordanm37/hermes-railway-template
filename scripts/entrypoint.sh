@@ -172,6 +172,17 @@ GMAIL
 PLANE
     echo "[bootstrap] Plane MCP configured" >&2
   fi
+
+  # Obsidian MCP (HTTP server — no local binary needed)
+  if [[ -n "${OBSIDIAN_MCP_URL:-}" ]]; then
+    cat <<OBSIDIAN
+  obsidian:
+    connect_timeout: 30
+    timeout: 120
+    url: "${OBSIDIAN_MCP_URL}"
+OBSIDIAN
+    echo "[bootstrap] Obsidian MCP configured" >&2
+  fi
 } >> "$CONFIG_FILE"
 
 echo "[bootstrap] MCP servers block written to config"
