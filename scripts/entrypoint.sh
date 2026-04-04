@@ -176,6 +176,16 @@ PLANE
 
 echo "[bootstrap] MCP servers block written to config"
 
+# Safety: remove empty mcp_servers: (YAML null) that crashes Hermes
+if grep -q "^mcp_servers:" "$CONFIG_FILE" 2>/dev/null; then
+  # Check if mcp_servers: is the last line or followed by a non-indented line (= empty block)
+  NEXT_LINE=$(grep -A 1 "^mcp_servers:" "$CONFIG_FILE" | tail -1)
+  if [[ "$NEXT_LINE" == "mcp_servers:" ]] || [[ -z "$NEXT_LINE" ]] || [[ "$NEXT_LINE" =~ ^[a-z] ]]; then
+    sed -i '/^mcp_servers:$/d' "$CONFIG_FILE"
+    echo "[bootstrap] Removed empty mcp_servers block (prevents crash)"
+  fi
+fi
+
 if [[ ! -f "$INIT_MARKER" ]]; then
   date -u +"%Y-%m-%dT%H:%M:%SZ" > "$INIT_MARKER"
   echo "[bootstrap] First-time initialization completed."
