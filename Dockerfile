@@ -25,13 +25,18 @@ RUN apt-get update \
     ca-certificates \
     curl \
     tini \
+    unzip \
   && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
+  && curl -fsSL https://bun.sh/install | bash \
   && rm -rf /var/lib/apt/lists/*
 
-# Install gmail-mcp server, gcalcli, and plane-mcp-server
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+
+# Install gmail-mcp server, gcalcli, plane-mcp-server, and research tools
 RUN npm install -g @shinzolabs/gmail-mcp@1.7.4 \
-  && pip install --no-cache-dir gcalcli plane-mcp-server
+  && pip install --no-cache-dir gcalcli plane-mcp-server httpx
 
 ENV PATH="/opt/venv/bin:${PATH}" \
   PYTHONUNBUFFERED=1 \
@@ -44,6 +49,8 @@ COPY --from=builder /opt/hermes-agent /opt/hermes-agent
 WORKDIR /app
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
 COPY scripts/bootstrap_gcalcli.py /app/scripts/bootstrap_gcalcli.py
+COPY skills/ /app/skills/
+RUN cd /app/skills/x-research && bun install 2>/dev/null || true
 COPY nikhil/ /app/nikhil/
 RUN chmod +x /app/scripts/entrypoint.sh
 
